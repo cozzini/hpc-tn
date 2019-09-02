@@ -7,12 +7,12 @@ Let's first compile the code without vectorization.
 First log into a compute node via ``qsub``
 ::
 
-  qsub -q jrc -l walltime=2:00:00 -l nodes=1:ppn=24 -I  
+  qsub  -l walltime=1:00:00 -l nodes=1:ppn=72 -q SHPC2019_cpuQ  -I  
 
-Load the intel/18.0 module 
+Load the intel compiler (version 19) 
 ::
 
-  module load intel/18.0
+  module load Intel_parallel_studio_xe2019u1
 
 Intel compiler uses vectorization features starting at ``-O2``. 
 To prevent it, you could either use lower optimization level (``-O2``) or explicitly 
@@ -62,13 +62,13 @@ Unload the current modules
 and load gcc compiler
 ::
 
-  module load gnu/7.2.0
+  module load gcc91
 
 Then compile 
 ::
 
-  gcc -O3 -o avx.x avx.c
-  gcc -O2 -ftree-vectorize -o avx.x avx.c
+  gcc-9.1.0 -O3 -o avx.x avx.c
+  gcc-9.1.0 -O2 -ftree-vectorize -o avx.x avx.c
 
 Compare the performance of the code with and without optimization (``-O2`` turn off vectorization, or ``-fno-tree-vectorize``). Compare the performance with the Intel results. 
  
