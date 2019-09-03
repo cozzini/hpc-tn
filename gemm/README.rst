@@ -4,8 +4,7 @@ Using CUBLAS in place of BLAS: benefits and drawbacks
 The goal of this tutorial is to show how to migrate from standard BLAS functions to CUBLAS, 
 analysing benefits and limitations of the procedure. 
 
-We will focus on the level 3 BLAS function called \*gemm. Such function comes in different flavours, for double precision (dgemm), single precision (sgemm) and 
-also complex single and complex double (cgemm and zgemm).
+We will focus on the level 3 BLAS function called \*gemm. Such function comes in different flavours, for double precision (dgemm), single precision (sgemm) and  also complex single and complex double (cgemm and zgemm).
 
 The first code ``gemm.c`` is a standard \*gemm code, where 3 matrices A,B,C are allocated, A and B are filled and the BLAS routine calculates the matrix-matrix product C=A*B.
 
@@ -26,27 +25,26 @@ The standard cblas interfaces are
   void cblas_sgemm(const enum CBLAS_ORDER Order, const enum CBLAS_TRANSPOSE TransA, const enum CBLAS_TRANSPOSE TransB, const int M, const int N, const int K, const float alpha, const float *A, const int lda, const float *B, const int ldb, const float beta, float *C, const int ldc)
 
 
-The first argument ``Order`` specifies wheter we are using column major storage or row major storage. We will be using colmajor, since cublas 
-uses such data layout. ``TransA`` and ``TransB`` tell that the matrices should be taken as they are, so not transposed. The rest are the standard GEMM arguments, to perform the operation
+The first argument ``Order`` specifies wheter we are using column major storage or row major storage. We will be using colmajor, since cublas  uses such data layout. ``TransA`` and ``TransB`` tell that the matrices should be taken as they are, so not transposed. The rest are the standard GEMM arguments, to perform the operation
 
 ::
  
   C(M,N) = alpha*A(M,K)*B(K,N) + beta*C(K,N)
 
 
-The paramters ``lda``, ``lbd`` and ``ldc`` are the leading dimensions of the matrices, which, since we are using colmajor order, should be the number of rows (lda=M, ldb=K, ldc=M)
+The parameters ``lda``, ``lbd`` and ``ldc`` are the leading dimensions of the matrices, which, since we are using colmajor order, should be the number of rows (lda=M, ldb=K, ldc=M)
 
 To compile and run the code, first submit an interactive job to the queue system
 
 ::
 
-  qsub -q jrc -l walltime=2:00:00 -l nodes=1:ppn=24 -I
+ qsub -l walltime=1:00:00,nodes=1:ppn=4 -I -q SHPC2019_cpuQ
 
 Load the needed module 
 
 ::
 
-  module load openblas/0.2.14/gnu/4.9.3
+  module load OpenBLAS-0.3.7
   
 And type 
 
@@ -70,13 +68,28 @@ You can use positional argument to specify the size
 
 will use M=2000 K=1000 and N=3000, so we will get C(2000,3000) = A(2000,1000)*B(1000,3000)
 
-The present BLAS code is based on the OpenBLAS implementation, which is multithreaded. To control the number of threads you could use the environment variable ``OMP_NUM_THREADS``
+The present BLAS code is based on the OpenBLAS implementation, which is multithreaded as you can see with the following command
+
+::
+
+  ldd /apps/OpenBLAS-0.3.7/lib/libopenblas.so
+	linux-vdso.so.1 =>  (0x00007ffeccfef000)
+	libm.so.6 => /lib64/libm.so.6 (0x00002aba38ada000)
+	libpthread.so.0 => /lib64/libpthread.so.0 (0x00002aba38ddc000)
+	libgfortran.so.3 => /lib64/libgfortran.so.3 (0x00002aba38ff8000)
+	libc.so.6 => /lib64/libc.so.6 (0x00002aba3931a000)
+	/lib64/ld-linux-x86-64.so.2 (0x00002aba3797e000)
+	libquadmath.so.0 => /lib64/libquadmath.so.0 (0x00002aba396e7000)
+	libgcc_s.so.1 => /lib64/libgcc_s.so.1 (0x00002aba39923000)
+
+
+To control the number of threads you could use the environment variable ``OMP_NUM_THREADS``
 
 ::
 
   export OMP_NUM_THREADS=4
 
-By default this variable has been set by the queue system to the number of cores requested at submission time (``ppn=24`` means ``OMP_NUM_THREADS=24``), but can be changed at runtime.
+By default this variable has been set by the queue system to the number of cores requested at submission time (``ppn=XX`` means ``OMP_NUM_THREADS=XX``), but can be changed at runtime.
 
 GPU Version
 ~~~~~~~~~~~~
@@ -144,14 +157,13 @@ To compile code issues:
 To run, log into a node using the queue system
 ::
 
-  qsub -q jrc -l walltime=2:00:00 -l nodes=1:ppn=24 -I
-
+qsub -l walltime=1:00:00,nodes=1:ppn=4 -I -q SHPC2019_gpuQ
 
 load the modules
 ::
 
-  module load openblas/0.2.14/gnu/4.9.3
-  module load cuda/7.5
+  module load OpenBLAS-0.3.7
+  module load cuda-10.0
 
 then issue
 ::
@@ -169,9 +181,6 @@ will use M=2000 K=1000 and N=3000, so we will get C(2000,3000) = A(2000,1000)*B(
 The code runs first on GPU using cuBLAS, than on CPU using OpenBLAS calls
 The code prints elapsed time in both cases, and for the GPU call reports also the time spent in allocation of device buffers and data movement.
 
-You should see that for matrix of size around 10000, the GPU performs better than the CPU, even including the communication time.
-However, given the size of our GPUs, you cannot fit matrices larger that 20000x20000.
-
 You could also test the performance of double precision calculation. To this end, in ``Makefile`` at line 12 modify  ``-DUSE_FLOAT`` in ``-DUSE_DOUBLE``.
 
 Then issue
@@ -182,8 +191,6 @@ Then issue
   make gpu
 
 
-With double precision, you cannot fit matrices larger that 14000x14000 on the GPU memory.
-
 The performance in double precision should be roughly half of the performance in single precision. 
 (This is NOT in general true for consumer-level GPUs (NVidia GTX e.g.) . This is due to the fact that such GPUs have a much lower count of double precision registers. 
 The Tesla series instead have typically twice as much single precision register compared to double precision.) 
@@ -191,7 +198,8 @@ The Tesla series instead have typically twice as much single precision register 
 Exercise
 ~~~~~~~~~
 
-- Increasing the matrices size up to 20000x20000 (single precision) or 14000x14000 (double precision) analyse the scaling of the GEMM calculation, for both CPU 
+- Identify the maximum size of the matrix you can run on both single and double precision 
+- Increasing the matrices size up to  maximum size (single precision and/or double precision) analyse the scaling of the GEMM calculation, for both CPU 
   and GPU and find the size for which the GPU is beneficial. Plot your results.
 
 - Repeat the analysis for different values of OMP_NUM_THREADS. (Remember, this effect only the CPU BLAS, not the cuBLAS)
@@ -203,7 +211,6 @@ More resources
 ^^^^^^^^^^^^^^^^^^^
 
 For further information please visit the official cuBLAS page:
-
 
 ::
 
