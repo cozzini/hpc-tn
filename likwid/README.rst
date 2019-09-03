@@ -20,24 +20,23 @@ As first action let us identify the topology of our node
 ::
 
   $ likwid-topology -g
---------------------------------------------------------------------------------
-CPU name:	Intel(R) Xeon(R) Gold 6140M CPU @ 2.30GHz
-CPU type:	Intel Skylake SP processor
-CPU stepping:	4
-********************************************************************************
-Hardware Thread Topology
-********************************************************************************
-Sockets:		4
-Cores per socket:	18
-Threads per core:	1
---------------------------------------------------------------------------------
-HWThread	Thread		Core		Socket		Available
-0		0		0		0		*
-.....   
-rest of output omitted..
+  --------------------------------------------------------------------------------
+  CPU name:	Intel(R) Xeon(R) Gold 6140M CPU @ 2.30GHz
+  CPU type:	Intel Skylake SP processor
+  CPU stepping:	4
+  ********************************************************************************
+  Hardware Thread Topology
+  ********************************************************************************
+  Sockets:		4
+  Cores per socket:	18
+  Threads per core:	1 
+  --------------------------------------------------------------------------------
+  HWThread	Thread		Core		Socket		Available
+  0		0		0		0		 
+  rest of output omitted
 
 
-`Likwid-perfctr`  Measures applications' interaction with the hardware using the hardware performance counters
+Likwid-perfctr  Measures applications' interaction with the hardware using the hardware performance counters
 The Linux MSR module, providing an interface to access model specific registers from user space, allows us to read out hardware performance counters with an unmodified Linux kernel. Moreover, recent Intel systems provide Uncore hardware counter through PCI interfaces.
 
 For gathering information about hardware performance capabilities and performance groups we can use the -a, -g and -H switches.
