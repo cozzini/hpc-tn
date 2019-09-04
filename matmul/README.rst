@@ -73,7 +73,7 @@ Exercise
   ::
 
     module purge
-    module load gnu/7.2.0
+    module load gcc91
 
   Run a few tests and understand why the intel compiler license is so expensive :)
 

@@ -467,3 +467,9 @@ And we can now run it in the following way:
 
 
 We have now the four distinct region we instrumented and for each of them we can check the specific performance results.
+
+Exercises:
+----------
+
+Run likwid  on avx codes and matmul code using different metric and compare results with Stream ones.  
+

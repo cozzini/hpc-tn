@@ -30,7 +30,7 @@ for (i = 0; i < 800000; i++){
     multiplyValues(a,b,c);
 }
 
-printf("%f", a[SIZE/2]);
+printf("%f\n", a[SIZE/2]);
 
 return 0;
 
