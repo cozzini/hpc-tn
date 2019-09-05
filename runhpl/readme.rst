@@ -1,4 +1,4 @@
-Benchmark C3E cluster using HPL and HPCG 
+Benchmark HPC-TN cluster using HPL and HPCG 
 =====================================
 
 

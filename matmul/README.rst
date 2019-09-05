@@ -25,7 +25,7 @@ Let's compile and analyse the performance.
 
 The performance are remarkably bad, let's try to make something better. The first observation is that the order of the loops forces 
 memory access that are non-optimal. Indeed, we accessing matrix b efficiently (since the inner loop runs on k, so we are accessing the columns of 
-matrix b, hwich is good in fortran) but matrix a and c are accessed by row in the k and j loop respectively. 
+matrix b, which is good in fortran) but matrix a and c are accessed by row in the k and j loop respectively. 
 
 
 ::
@@ -78,4 +78,4 @@ Exercise
   Run a few tests and understand why the intel compiler license is so expensive :)
 
 - (Optional) The folder also contains a C version of the code. Try to repeat the analysis of the 
-  loop order to understand memory access, remeber that C stores data in row order
+  loop order to understand memory access, remember that C stores data in row order
