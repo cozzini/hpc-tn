@@ -23,7 +23,13 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
+#ifdef _OPENMP
+#include <omp.h>
+#endif
 
+#define CPU_TIME (clock_gettime( CLOCK_PROCESS_CPUTIME_ID, &ts ), (double)ts.tv_sec +	\
+		   (double)ts.tv_nsec * 1e-9)
 
 #define N_default 10000
 
@@ -56,6 +62,7 @@ int main( int argc, char **argv )
   
   // initialize the array
 
+#ifdef _OPENMP
 #pragma omp parallel
   {
     int me = omp_get_thread_num();
@@ -70,7 +77,7 @@ int main( int argc, char **argv )
 
   srand48(time(NULL));
   for ( int ii = 0; ii < N; ii++ )
-    array[ii] = drand48(myseed);
+    array[ii] = drand48();
   
 #endif
 
@@ -94,7 +101,7 @@ int main( int argc, char **argv )
    *  -----------------------------------------------------------------------------
    */
 
-  printf("Sum is %g, process took %g of wall-clock time \n", S, tend - tstart);
+  printf("process took %g of wall-clock time \n", tend - tstart);
   
   free( array );
   return 0;
