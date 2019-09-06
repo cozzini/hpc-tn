@@ -33,6 +33,7 @@
 #include <sys/syscall.h>
 #include <omp.h>
 
+//#define SYS_getcpu
 
 #define N_default 100
 
@@ -47,13 +48,11 @@
 
 
 
-
 #define CPU_ID_ENTRY_IN_PROCSTAT 39
 #define HOSTNAME_MAX_LENGTH      200
 
 int read_proc__self_stat ( int, int * );
 int get_cpu_id           ( void       );
-
 
 
 
@@ -94,33 +93,41 @@ int main( int argc, char **argv )
   }
 
 
+  // initialize the array
+  /* srand48( time(NULL) ); */
+  /* for ( int ii = 0; ii < N; ii++ ) */
+  /*   array[ii] = drand48(); */
+
   for ( int ii = 0; ii < N; ii++ )
     array[ii] = (double)ii;
 
-  double S[ nthreads ];                                     // this will store the summation's chunks
+
+  double S[nthreads][8];                                    // this will store the summation's chunks
   double runtime = 0;                                       // this will be the runtime
   
   double tstart  = CPU_TIME_W;  
 
-  memset( S, 0, nthreads*sizeof(double) );
-  
-#pragma omp parallel shared(S)
+#pragma omp parallel reduction(+:runtime) shared(S)
   {    
-  int    me      = omp_get_thread_num();
-    
+    struct  timespec myts;
+    double mystart = CPU_TIME_T;
+    int    me      = omp_get_thread_num();
+    S[me][0]       = 0;
 #pragma omp for
     for ( int ii = 0; ii < N; ii++ )
-	S[me] += array[ii];
+	S[me][0] += array[ii];
+
+    runtime += CPU_TIME_T - mystart;
   }
 
   if ( nthreads > 1 )
     for ( int ii = 1; ii < nthreads; ii++ )
-      S[0] += S[ii];
+      S[0][0] += S[ii][0];
   
   double tend = CPU_TIME_W;
 
-  printf("Sum is %g, process took %g of wall-clock time, <%g> sec of thread-time \n", S[0], tend - tstart, runtime/nthreads );
-  
+  printf("Sum is %g, process took %g sec of wall-clock time, <%g> sec of thread-time \n", S[0][0], tend - tstart, runtime/nthreads );
+
   free( array );
   return 0;
 }

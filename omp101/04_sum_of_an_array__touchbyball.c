@@ -29,22 +29,29 @@
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
+#include <unistd.h>
+#include <sys/syscall.h>
 #include <omp.h>
 
 
 #define N_default 100
 
-#define CPU_TIME_R (clock_gettime( CLOCK_REALTIME, &ts ), (double)ts.tv_sec +	\
+#define CPU_TIME_W (clock_gettime( CLOCK_REALTIME, &ts ), (double)ts.tv_sec +	\
 		    (double)ts.tv_nsec * 1e-9)
 
-#define CPU_TIME_th (clock_gettime( CLOCK_THREAD_CPUTIME_ID, &myts ), (double)myts.tv_sec +	\
+#define CPU_TIME_T (clock_gettime( CLOCK_THREAD_CPUTIME_ID, &myts ), (double)myts.tv_sec +	\
 		     (double)myts.tv_nsec * 1e-9)
 
-#define CPU_TIME (clock_gettime( CLOCK_PROCESS_CPUTIME_ID, &ts ), (double)ts.tv_sec +	\
+#define CPU_TIME_P (clock_gettime( CLOCK_PROCESS_CPUTIME_ID, &ts ), (double)ts.tv_sec +	\
 		   (double)ts.tv_nsec * 1e-9)
 
 
 
+#define CPU_ID_ENTRY_IN_PROCSTAT 39
+#define HOSTNAME_MAX_LENGTH      200
+
+int read_proc__self_stat ( int, int * );
+int get_cpu_id           ( void       );
 
 
 
@@ -85,21 +92,17 @@ int main( int argc, char **argv )
       nthreads = omp_get_num_threads();
       printf("omp summation with %d threads\n", nthreads );
     }
+    int me = omp_get_thread_num();
+#pragma omp critical
+    printf("thread %2d is running on core %2d\n", me, get_cpu_id() );    
   }
 
 
   // initialize the array
 
-#pragma omp parallel
-  {
-    int me = omp_get_thread_num();
-    //unsigned int myt = time(NULL);
-    //unsigned short myseed[3] = { myt, myt+me, myt+me+me };
-#pragma omp for
-    for ( int ii = 0; ii < N; ii++ )
-      array[ii] = (double)ii;
-    //array[ii] = erand48(myseed);
-  }
+#pragma omp parallel for
+  for ( int ii = 0; ii < N; ii++ )
+    array[ii] = (double)ii;
 
 
 
@@ -112,23 +115,13 @@ int main( int argc, char **argv )
   double S       = 0;                                       // this will store the summation
   double runtime = 0;                                       // this will be the runtime
 
-  double tstart  = CPU_TIME_R;
-  
-
-  
-#pragma omp parallel reduction(+:runtime)
-  {
-    struct  timespec myts;
-    double mystart = CPU_TIME_th;
-#pragma omp for reduction(+:S)
+  double tstart  = CPU_TIME_W;
+    
+#pragma omp parallel for reduction(+:S)
     for ( int ii = 0; ii < N; ii++ )
       S += array[ii];
 
-    runtime += CPU_TIME_th - mystart;
-  }
-
-
-  double tend = CPU_TIME_R;
+  double tend = CPU_TIME_W;
 
 
   /*  -----------------------------------------------------------------------------
@@ -141,3 +134,85 @@ int main( int argc, char **argv )
   free( array );
   return 0;
 }
+
+
+
+
+
+
+int get_cpu_id( void )
+{
+#if defined(_GNU_SOURCE)                              // GNU SOURCE ------------
+  
+  return  sched_getcpu( );
+
+#else
+
+#ifdef SYS_getcpu                                     //     direct sys call ---
+  
+  int cpuid;
+  if ( syscall( SYS_getcpu, &cpuid, NULL, NULL ) == -1 )
+    return -1;
+  else
+    return cpuid;
+  
+#else      
+
+  unsigned val;
+  if ( read_proc__self_stat( CPU_ID_ENTRY_IN_PROCSTAT, &val ) == -1 )
+    return -1;
+
+  return (int)val;
+
+#endif                                                // -----------------------
+#endif
+
+}
+
+
+
+int read_proc__self_stat( int field, int *ret_val )
+/*
+  Other interesting fields:
+
+  pid      : 0
+  father   : 1
+  utime    : 13
+  cutime   : 14
+  nthreads : 18
+  rss      : 22
+  cpuid    : 39
+
+  read man /proc page for fully detailed infos
+ */
+{
+  // not used, just mnemonic
+  // char *table[ 52 ] = { [0]="pid", [1]="father", [13]="utime", [14]="cutime", [18]="nthreads", [22]="rss", [38]="cpuid"};
+
+  *ret_val = 0;
+
+  FILE *file = fopen( "/proc/self/stat", "r" );
+  if (file == NULL )
+    return -1;
+
+  char   *line = NULL;
+  int     ret;
+  size_t  len;
+  ret = getline( &line, &len, file );
+  fclose(file);
+
+  if( ret == -1 )
+    return -1;
+
+  char *savetoken = line;
+  char *token = strtok_r( line, " ", &savetoken);
+  --field;
+  do { token = strtok_r( NULL, " ", &savetoken); field--; } while( field );
+
+  *ret_val = atoi(token);
+
+  free(line);
+
+  return 0;
+}
+
